@@ -212,6 +212,7 @@ ADS components are the vocabulary consumers build with. Each one:
 | `DataTable` | Type-safe columns, click-to-sort, and an empty state |
 | `ComponentRequestWizard` | Multi-step intake flow that emails a request with Approve/Reject actions |
 | `RatingStars` | Star rating input: field label, numeric readout, half-star precision, plus loading/empty/error states |
+| `Slider` | Range slider that surfaces the percentage **on the thumb (circle)** on hover/focus/drag; adds a field label, percentage readout, and loading/empty/error states |
 
 Each is documented in Storybook; ADS treats Storybook as the living component
 reference.
@@ -472,6 +473,40 @@ read-only, empty (`emptyText` readout), error (critical stars + helper),
 loading (skeleton). **Tokens:** `color.action.primary` (filled stars),
 `color.action.primaryHover` (hover), `color.text.disabled` (empty stars),
 `color.status.critical` (error), `text.label`, `space-2`.
+
+### Slider
+Range slider whose headline behavior is a **percentage label rendered on the
+thumb (the circle)**: it appears on hover, on keyboard focus, and while
+dragging. Adds a field label, an optional percentage readout, and
+loading/empty/error states on top of the substrate slider.
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `value` | `number` | — (uncontrolled if omitted) |
+| `defaultValue` | `number` | `0` |
+| `onChange` | `(value: number) => void` | — (fires while dragging) |
+| `onChangeCommitted` | `(value: number) => void` | — (fires on release) |
+| `min` | `number` | `0` |
+| `max` | `number` | `100` |
+| `step` | `number` | `1` |
+| `disabled` | `boolean` | `false` |
+| `size` | `'small' \| 'medium'` | `'medium'` |
+| `label` | `string` | — |
+| `helperText` | `ReactNode` | — |
+| `error` | `boolean` | `false` |
+| `showValue` | `boolean` | `false` |
+| `marks` | `boolean` | `false` |
+| `formatLabel` | `(value: number, percent: number) => ReactNode` | — (rounded `%`) |
+| `loading` | `boolean` | `false` |
+| `name` | `string` | — (auto-generated) |
+
+**States:** default, hover (percentage on the thumb), focus (visible ring +
+percentage on the thumb), active/dragging, disabled, empty (`0%` readout), error
+(critical track + helper), loading (skeleton). The on-thumb label defaults to the
+value's percentage of the `min`–`max` range and can be overridden with
+`formatLabel`. **Tokens:** `color.action.primary` (track, thumb, label fill),
+`color.status.critical` (error), `color.text.secondary` (readout), `text.label`,
+`radius-md`, `space-2`.
 
 ---
 
