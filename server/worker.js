@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { spawnSync } from 'node:child_process';
-import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync, writeFileSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { loadRequests, loadBuilds, saveBuilds } from './store.js';
 
 /* ------------------------------------------------------------------ config */
@@ -74,8 +74,15 @@ function buildPrompt(request, { pascal }) {
     `- Do not modify unrelated files. Ensure \`npm run build\` passes.`,
     ``,
     `Context: this request came from project "${project}" (original name:`,
-    `"${componentName}"). When done, stop — do not commit or push; the caller`,
-    `handles git.`,
+    `"${componentName}").`,
+    ``,
+    `Finally, write a file "PR_META.json" at the repo root containing a JSON`,
+    `object with two fields:`,
+    `  - "title": a concise pull-request title for what you built`,
+    `  - "body": a markdown PR description summarizing the component, the`,
+    `    functionality it supports, and how it uses ADS tokens.`,
+    `This is metadata for the PR (the caller reads it, then deletes it). Do NOT`,
+    `commit or push — the caller handles git and opens the PR.`,
   ].join('\n');
 }
 
@@ -160,6 +167,31 @@ async function implement(id, entry) {
     run('npm', ['run', 'build'], { cwd: CFG.botDir, shell: true });
   }
 
+  // Hybrid: the agent authors the PR title/body (it knows what it built); the
+  // git plumbing below stays deterministic. Fall back to a template if the
+  // agent didn't produce usable metadata.
+  let prTitle = `Add ${pascal} component (approved request)`;
+  let prBody =
+    `Implements the approved request for **${pascal}** from project ` +
+    `_${entry.request.project}_.\n\n**Requested functionality:**\n\n` +
+    `${entry.request.description}\n\n---\n🤖 Auto-generated from an approved ` +
+    `ComponentRequestWizard submission. Review before merging.`;
+
+  const metaPath = join(CFG.botDir, 'PR_META.json');
+  if (existsSync(metaPath)) {
+    try {
+      const meta = JSON.parse(readFileSync(metaPath, 'utf8'));
+      if (typeof meta.title === 'string' && meta.title.trim()) prTitle = meta.title.trim();
+      if (typeof meta.body === 'string' && meta.body.trim()) prBody = meta.body.trim();
+      log('using agent-authored PR title/body');
+    } catch (err) {
+      log('PR_META.json unparseable, using template:', err.message);
+    }
+    rmSync(metaPath, { force: true }); // never commit the metadata file
+  } else {
+    log('no PR_META.json from agent, using template');
+  }
+
   git(['add', '-A']);
   git(['commit', '-m', `Add ${pascal} component (approved request)\n\nProject: ${entry.request.project}`]);
 
@@ -169,11 +201,7 @@ async function implement(id, entry) {
   }
 
   git(['push', '-u', 'origin', branch, '--force-with-lease']);
-  const prUrl = await openPr(
-    branch,
-    `Add ${pascal} component (approved request)`,
-    `Implements the approved request for **${pascal}** from project _${entry.request.project}_.\n\n**Requested functionality:**\n\n${entry.request.description}\n\n---\n🤖 Auto-generated from an approved ComponentRequestWizard submission. Review before merging.`,
-  );
+  const prUrl = await openPr(branch, prTitle, prBody);
   return { branch, prUrl, dryRun: false };
 }
 

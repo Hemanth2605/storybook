@@ -18,6 +18,9 @@ server/.env
 server/node_modules
 server/data
 
+# Automation: agent-authored PR metadata (read then deleted by the worker)
+PR_META.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
