@@ -10,3 +10,4 @@ export * from './AlertBanner';
 export * from './EmptyState';
 export * from './DataTable';
 export * from './ComponentRequestWizard';
+export * from './RatingStars';
