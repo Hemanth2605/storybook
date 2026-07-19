@@ -41,6 +41,14 @@ npm run worker:once    # one pass, then exit (supervised runs / cron)
 | `POLL_MS` | `15000` | Poll interval. |
 | `CLAUDE_BIN` | `claude` | Claude CLI used headless as the implementer. |
 
+## Agent vs. workflow (what to call this)
+This pipeline is a **human-gated automation workflow**, not "an AI agent" as a
+whole. Only the `claude -p` implementation step is an actual agent (the LLM
+dynamically directs its own tool use to build the component); the email,
+approval, polling, and git/PR steps are deterministic orchestration. Accurate
+label: "agentic workflow" / "AI-powered automation pipeline." See
+`server/AUTOMATION.md` for the full breakdown.
+
 ## Rules & safety
 - **Approve = authorization** to branch, push, and open a PR. It **never merges**;
   every PR waits for human review. Merging is always the user's explicit call.
