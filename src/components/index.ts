@@ -9,3 +9,4 @@ export * from './UserAvatar';
 export * from './AlertBanner';
 export * from './EmptyState';
 export * from './DataTable';
+export * from './ComponentRequestWizard';
