@@ -1,0 +1,8 @@
+/* Minimal base styles. MUI's CssBaseline + theme handle the rest. */
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
