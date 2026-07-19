@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Server secrets, deps & runtime data
+.env
+server/.env
+server/node_modules
+server/data
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

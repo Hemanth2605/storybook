@@ -12,6 +12,7 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import {
   AlertBanner,
   AppButton,
+  ComponentRequestWizard,
   ConfirmDialog,
   DataTable,
   EmptyState,
@@ -111,6 +112,16 @@ export default function App() {
           />
         </Paper>
       )}
+
+      <Divider sx={{ my: 4 }} />
+
+      <Stack spacing={2} sx={{ mb: 2 }}>
+        <PageHeader
+          title="Request a component"
+          subtitle="Missing something? Send a request — it's emailed to the reviewer with Approve / Reject buttons."
+        />
+      </Stack>
+      <ComponentRequestWizard />
 
       <ConfirmDialog
         open={confirmOpen}

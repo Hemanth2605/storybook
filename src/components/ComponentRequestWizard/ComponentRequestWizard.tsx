@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
@@ -9,25 +9,28 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import Link from '@mui/material/Link';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import SendIcon from '@mui/icons-material/Send';
 import { AppButton } from '../AppButton/AppButton';
-import {
-  buildRequestEmail,
-  type BuiltEmail,
-  type ComponentRequest,
-} from './buildRequestEmail';
+import { AlertBanner } from '../AlertBanner/AlertBanner';
+import type { ComponentRequest } from './buildRequestEmail';
+
+export interface SubmitResult {
+  ok: boolean;
+  id?: string;
+  to?: string;
+  /** Present when the server used a test inbox: a URL to view the sent mail. */
+  previewUrl?: string;
+}
 
 export interface ComponentRequestWizardProps {
-  /** Fixed address the request email is sent to. */
+  /** Endpoint that sends the email. Defaults to the proxied `/api/request`. */
+  apiUrl?: string;
+  /** Address shown to the user as the destination (informational). */
   recipientEmail?: string;
-  /** Called with the request payload + composed email when submitted. */
-  onSubmit?: (request: ComponentRequest, email: BuiltEmail) => void;
-  /**
-   * Opens the user's mail client via `mailto:` on submit. Set false to
-   * only preview the email (useful in Storybook). Default true.
-   */
-  openMailClient?: boolean;
+  /** Called after a successful submit with the payload + server result. */
+  onSubmit?: (request: ComponentRequest, result: SubmitResult) => void;
 }
 
 const STEPS = ['Missing component', 'Describe it', 'Your project', 'Review & send'];
@@ -35,24 +38,21 @@ const STEPS = ['Missing component', 'Describe it', 'Your project', 'Review & sen
 const EMPTY: ComponentRequest = { componentName: '', description: '', project: '' };
 
 /**
- * A guided, step-by-step intake wizard (built on MUI v7 Stepper). It asks
- * for a missing component, a functionality description, and the requester's
- * project, then composes a formatted request email — with Approve / Reject
- * reply buttons — addressed to a fixed recipient.
+ * A guided, step-by-step intake wizard (built on MUI v7 Stepper). It asks for a
+ * missing component, a functionality description, and the requester's project,
+ * then POSTs to a backend that emails the request — with working Approve /
+ * Reject buttons — to a fixed recipient.
  */
 export function ComponentRequestWizard({
+  apiUrl = '/api/request',
   recipientEmail = 'hemanth.mareedu8@gmail.com',
   onSubmit,
-  openMailClient = true,
 }: ComponentRequestWizardProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [form, setForm] = useState<ComponentRequest>(EMPTY);
-  const [sent, setSent] = useState(false);
-
-  const email = useMemo(
-    () => buildRequestEmail(form, recipientEmail),
-    [form, recipientEmail],
-  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<SubmitResult | null>(null);
 
   const set = (key: keyof ComponentRequest) => (value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -67,29 +67,56 @@ export function ComponentRequestWizard({
   const next = () => setActiveStep((s) => Math.min(s + 1, STEPS.length - 1));
   const back = () => setActiveStep((s) => Math.max(s - 1, 0));
 
-  const submit = () => {
-    onSubmit?.(form, email);
-    if (openMailClient) window.location.href = email.mailtoHref;
-    setSent(true);
+  const submit = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data: SubmitResult & { error?: string } = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || `Request failed (${res.status})`);
+      }
+      setResult(data);
+      onSubmit?.(form, data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not reach the email server.',
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const reset = () => {
     setForm(EMPTY);
     setActiveStep(0);
-    setSent(false);
+    setResult(null);
+    setError(null);
   };
 
-  if (sent) {
+  if (result) {
     return (
       <Paper variant="outlined" sx={{ p: 4, maxWidth: 640, mx: 'auto' }}>
         <Stack spacing={2} alignItems="center" textAlign="center">
           <CheckCircleIcon color="success" sx={{ fontSize: 56 }} />
           <Typography variant="h6">Request sent</Typography>
           <Typography variant="body2" color="text.secondary">
-            Your request for <strong>{form.componentName}</strong> was composed for{' '}
-            <strong>{recipientEmail}</strong>. The reviewer can Approve or Reject it
-            directly from the email.
+            Your request for <strong>{form.componentName}</strong> was emailed to{' '}
+            <strong>{result.to ?? recipientEmail}</strong>. The reviewer can Approve
+            or Reject it directly from the email.
           </Typography>
+          {result.previewUrl && (
+            <Typography variant="body2">
+              Test inbox preview:{' '}
+              <Link href={result.previewUrl} target="_blank" rel="noreferrer">
+                view the sent email
+              </Link>
+            </Typography>
+          )}
           <Button onClick={reset}>Submit another request</Button>
         </Stack>
       </Paper>
@@ -163,11 +190,12 @@ export function ComponentRequestWizard({
         {activeStep === 3 && (
           <Stack spacing={2}>
             <Typography variant="h6">Review your request</Typography>
-            <EmailPreview
-              recipient={recipientEmail}
-              request={form}
-              email={email}
-            />
+            <RequestSummary recipient={recipientEmail} request={form} />
+            {error && (
+              <AlertBanner severity="error" title="Could not send">
+                {error}
+              </AlertBanner>
+            )}
           </Stack>
         )}
       </Box>
@@ -175,7 +203,7 @@ export function ComponentRequestWizard({
       <Divider sx={{ my: 3 }} />
 
       <Stack direction="row" justifyContent="space-between">
-        <Button onClick={back} disabled={activeStep === 0} color="inherit">
+        <Button onClick={back} disabled={activeStep === 0 || loading} color="inherit">
           Back
         </Button>
         {activeStep < STEPS.length - 1 ? (
@@ -183,7 +211,12 @@ export function ComponentRequestWizard({
             Next
           </AppButton>
         ) : (
-          <AppButton onClick={submit} startIcon={<SendIcon />}>
+          <AppButton
+            onClick={submit}
+            loading={loading}
+            loadingText="Sending…"
+            startIcon={<SendIcon />}
+          >
             Submit
           </AppButton>
         )}
@@ -192,23 +225,23 @@ export function ComponentRequestWizard({
   );
 }
 
-/** Formatted preview of the email that will be sent, incl. action buttons. */
-function EmailPreview({
+/** Read-only summary of the request shown on the review step. */
+function RequestSummary({
   recipient,
   request,
-  email,
 }: {
   recipient: string;
   request: ComponentRequest;
-  email: BuiltEmail;
 }) {
   return (
     <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
       <Box sx={{ bgcolor: 'action.hover', px: 2, py: 1.5 }}>
         <Typography variant="caption" color="text.secondary" display="block">
-          To: {recipient}
+          Will be emailed to: {recipient}
         </Typography>
-        <Typography variant="subtitle2">{email.subject}</Typography>
+        <Typography variant="subtitle2">
+          New Component Request: {request.componentName || '—'}
+        </Typography>
       </Box>
 
       <Box sx={{ p: 2 }}>
@@ -226,28 +259,10 @@ function EmailPreview({
         </Stack>
 
         <Divider sx={{ my: 2 }} />
-
-        <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-          Reviewer actions (included in the email):
+        <Typography variant="caption" color="text.secondary">
+          The email includes <strong>Approve</strong> and <strong>Reject</strong>{' '}
+          buttons the reviewer can click.
         </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="contained"
-            color="success"
-            size="small"
-            href={email.approveHref}
-          >
-            Approve
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            href={email.rejectHref}
-          >
-            Reject
-          </Button>
-        </Stack>
       </Box>
     </Paper>
   );
