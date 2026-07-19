@@ -211,6 +211,7 @@ ADS components are the vocabulary consumers build with. Each one:
 | `EmptyState` | The "no data" pattern: icon + message + call to action |
 | `DataTable` | Type-safe columns, click-to-sort, and an empty state |
 | `ComponentRequestWizard` | Multi-step intake flow that emails a request with Approve/Reject actions |
+| `RatingStars` | Star rating input: field label, numeric readout, half-star precision, plus loading/empty/error states |
 
 Each is documented in Storybook; ADS treats Storybook as the living component
 reference.
@@ -442,6 +443,35 @@ actions (via the `server/` backend).
 **States:** step 1–3 (with per-step validation), review, submitting (loading),
 sent (confirmation), error ("Could not send"). **Tokens:** `color.action.primary`,
 `color.status.critical` (error), `elevation-flat`, `space-6`.
+
+### RatingStars
+Star rating input with hover preview, keyboard arrows, and half-star precision.
+Adds a field label, an optional numeric readout, and loading/empty/error states
+on top of the substrate rating control.
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `value` | `number \| null` | — (uncontrolled if omitted) |
+| `defaultValue` | `number` | `0` |
+| `onChange` | `(value: number \| null) => void` | — |
+| `max` | `number` | `5` |
+| `precision` | `number` | `0.5` (half-star) |
+| `readOnly` | `boolean` | `false` |
+| `disabled` | `boolean` | `false` |
+| `size` | `'small' \| 'medium' \| 'large'` | `'medium'` |
+| `label` | `string` | — |
+| `helperText` | `ReactNode` | — |
+| `error` | `boolean` | `false` |
+| `showValue` | `boolean` | `false` |
+| `emptyText` | `string` | `'Not rated'` |
+| `loading` | `boolean` | `false` |
+| `name` | `string` | — (auto-generated) |
+
+**States:** default, hover (preview), focus (visible ring), disabled,
+read-only, empty (`emptyText` readout), error (critical stars + helper),
+loading (skeleton). **Tokens:** `color.action.primary` (filled stars),
+`color.action.primaryHover` (hover), `color.text.disabled` (empty stars),
+`color.status.critical` (error), `text.label`, `space-2`.
 
 ---
 
