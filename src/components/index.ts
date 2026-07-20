@@ -12,3 +12,4 @@ export * from './DataTable';
 export * from './ComponentRequestWizard';
 export * from './RatingStars';
 export * from './Slider';
+export * from './Switch';

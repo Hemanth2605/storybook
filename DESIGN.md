@@ -213,6 +213,7 @@ ADS components are the vocabulary consumers build with. Each one:
 | `ComponentRequestWizard` | Multi-step intake flow that emails a request with Approve/Reject actions |
 | `RatingStars` | Star rating input: field label, numeric readout, half-star precision, plus loading/empty/error states |
 | `Slider` | Range slider that surfaces the percentage **on the thumb (circle)** on hover/focus/drag; adds a field label, percentage readout, and loading/empty/error states |
+| `Switch` | On/off toggle whose **state text flips with the toggle** (off text by default, on text once clicked); adds a field label, live state readout, and loading/error states |
 
 Each is documented in Storybook; ADS treats Storybook as the living component
 reference.
@@ -507,6 +508,34 @@ value's percentage of the `min`–`max` range and can be overridden with
 `formatLabel`. **Tokens:** `color.action.primary` (track, thumb, label fill),
 `color.status.critical` (error), `color.text.secondary` (readout), `text.label`,
 `radius-md`, `space-2`.
+
+### Switch
+On/off toggle whose headline behavior is a **state word that flips with the
+toggle**: it reads the off text by default and switches to the on text the moment
+the control is toggled (click or keyboard). Adds a field label, a live state
+readout, and loading/error states on top of the substrate switch.
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `checked` | `boolean` | — (uncontrolled if omitted) |
+| `defaultChecked` | `boolean` | `false` |
+| `onChange` | `(checked: boolean) => void` | — (fires on toggle) |
+| `onText` | `string` | `'On'` |
+| `offText` | `string` | `'Off'` |
+| `disabled` | `boolean` | `false` |
+| `size` | `'small' \| 'medium'` | `'medium'` |
+| `label` | `string` | — |
+| `helperText` | `ReactNode` | — |
+| `error` | `boolean` | `false` |
+| `loading` | `boolean` | `false` |
+| `name` | `string` | — (auto-generated) |
+
+**States:** default/off (`offText` readout), on (`onText` readout), hover, focus
+(visible ring), disabled, error (critical label + helper), loading (skeleton).
+The readout text defaults to `Off`/`On` and can be overridden with `offText`/
+`onText`. **Tokens:** `color.action.primary` (track/thumb when on, focus ring),
+`color.status.critical` (error), `color.text.primary` (on readout),
+`color.text.secondary` (off readout), `text.label`, `space-1`, `space-2`.
 
 ---
 
